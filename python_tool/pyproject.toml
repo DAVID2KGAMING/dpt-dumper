@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dpt-dumper"
+version = "1.0.0"
+description = "Restore DEX files from DPT-Shell protected APKs"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+verify = ["androguard"]
+
+[project.scripts]
+dpt-dumper = "dpt_dumper.cli:main"
+
+[tool.setuptools]
+packages = ["dpt_dumper"]
