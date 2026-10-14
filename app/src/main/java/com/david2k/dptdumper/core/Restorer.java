@@ -62,6 +62,29 @@ public final class Restorer {
         return out;
     }
 
+    /** Look inside an APK/zip for the Oooo file (assets/OoooooOooo). Returns null if not found. */
+    public static byte[] findOooo(byte[] apk) throws IOException {
+        int start = -1;
+        for (int i = 0; i + 4 <= apk.length; i++) {
+            if (apk[i] == 'P' && apk[i + 1] == 'K' && apk[i + 2] == 3 && apk[i + 3] == 4) { start = i; break; }
+        }
+        if (start < 0) return null;
+        try (ZipInputStream z = new ZipInputStream(new ByteArrayInputStream(apk, start, apk.length - start))) {
+            ZipEntry e;
+            while ((e = z.getNextEntry()) != null) {
+                if (e.isDirectory()) continue;
+                String base = e.getName().substring(e.getName().lastIndexOf('/') + 1);
+                if (!base.toLowerCase().startsWith("oooo")) continue;
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] tmp = new byte[65536];
+                int n;
+                while ((n = z.read(tmp)) > 0) bo.write(tmp, 0, n);
+                return bo.toByteArray();
+            }
+        }
+        return null;
+    }
+
     /** Pick the Oooo block whose method sizes overlap the DEX the most. Returns {index, overlap}. */
     private static int[] bestBlock(Map<Integer, DexUtil.Method> dexMap, OoooParser oooo) {
         int bestI = -1, bestC = 0;
@@ -85,6 +108,10 @@ public final class Restorer {
         for (NamedDex d : dexes) names.append(names.length() == 0 ? "" : ", ").append(d.name);
         log.log("debug", "DEX files: " + names);
 
+        if (ooooData.length > 3 && ooooData[0] == 'P' && ooooData[1] == 'K') {
+            log.log("error", "The Oooo file you selected is an APK/zip, not an Oooo file. Leave Oooo empty to auto-detect it from the APK.");
+            return 1;
+        }
         OoooParser oooo = OoooParser.parse(ooooData);
         if (oooo.methodCount == 0) { log.log("error", "No methods parsed from Oooo file; nothing to patch."); return 1; }
         log.log("success", "Oooo dex_count=" + oooo.dexCount + ", methods=" + oooo.methodCount);

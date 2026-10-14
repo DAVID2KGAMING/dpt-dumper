@@ -105,7 +105,7 @@ public class MainActivity extends Activity {
         dexTv = addPicker(root, "1. DEX or APK", "Select DEX / APK", new View.OnClickListener() {
             @Override public void onClick(View v) { pickFile(REQ_DEX); }
         });
-        ooooTv = addPicker(root, "2. Oooo file", "Select Oooo", new View.OnClickListener() {
+        ooooTv = addPicker(root, "2. Oooo file (optional)", "Select Oooo", new View.OnClickListener() {
             @Override public void onClick(View v) { pickFile(REQ_OOOO); }
         });
         outTv = addPicker(root, "3. Output folder", "Select output folder", new View.OnClickListener() {
@@ -150,7 +150,7 @@ public class MainActivity extends Activity {
         card.setPadding(dp(14), dp(12), dp(14), dp(12));
         card.setBackground(round(CARD, 14));
         card.addView(text(title, 14, Color.WHITE, true));
-        TextView value = text("Not selected", 12, MUTED, false);
+        TextView value = text(title.contains("optional") ? "Auto-detected from the APK if left empty" : "Not selected", 12, MUTED, false);
         value.setPadding(0, dp(2), 0, dp(8));
         card.addView(value);
         card.addView(button(btnLabel, false, l), new LinearLayout.LayoutParams(
@@ -226,8 +226,8 @@ public class MainActivity extends Activity {
     }
 
     private void startRun() {
-        if (dexUri == null || ooooUri == null) {
-            Toast.makeText(this, "Select the DEX/APK and the Oooo file first", Toast.LENGTH_SHORT).show();
+        if (dexUri == null) {
+            Toast.makeText(this, "Select the DEX or APK first", Toast.LENGTH_SHORT).show();
             return;
         }
         logTv.setText("");
@@ -241,7 +241,17 @@ public class MainActivity extends Activity {
             @Override public void run() {
                 try {
                     byte[] dexBytes = readAll(dex);
-                    byte[] ooooBytes = readAll(oooo);
+                    byte[] ooooBytes;
+                    if (oooo != null) {
+                        ooooBytes = readAll(oooo);
+                    } else {
+                        ooooBytes = Restorer.findOooo(dexBytes);
+                        if (ooooBytes == null) {
+                            log("error", "No Oooo file found inside the APK. Select the Oooo file manually.");
+                            return;
+                        }
+                        log("success", "Oooo auto-detected from the APK (" + ooooBytes.length + " bytes)");
+                    }
                     String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
                     Restorer.Sink sink = out != null ? new TreeSink(out, "DPT_Dumper_" + stamp)
                             : new FileSink(new File(getExternalFilesDir(null), "DPT_Dumper_" + stamp));
